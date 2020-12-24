@@ -4,10 +4,7 @@ package bno055
 import (
 	"encoding/binary"
 	"errors"
-	"sync"
 	"time"
-
-	"github.com/kpeu3i/bno055/i2c"
 )
 
 type Status struct {
@@ -81,26 +78,14 @@ type I2CBus interface {
 	Write(reg byte, val byte) error
 	ReadBuffer(reg byte, buff []byte) error
 	WriteBuffer(reg byte, buff []byte) error
-	Close() error
-}
-
-type Option func(config *config)
-
-type config struct {
-	retryCount   int
-	retryTimeout time.Duration
 }
 
 type Sensor struct {
-	mu     sync.Mutex
 	bus    I2CBus
 	opMode byte
 }
 
 func (s *Sensor) Status() (*Status, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	err := s.bus.Write(bno055PageID, 0x0)
 	if err != nil {
 		return nil, err
@@ -151,9 +136,6 @@ func (s *Sensor) Status() (*Status, error) {
 }
 
 func (s *Sensor) Revision() (*Revision, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	accelerometer, err := s.bus.Read(bno055AccelRevID)
 	if err != nil {
 		return nil, err
@@ -198,9 +180,6 @@ func (s *Sensor) Revision() (*Revision, error) {
 }
 
 func (s *Sensor) UseExternalCrystal(b bool) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	prevMode := s.opMode
 
 	err := s.setOperationMode(bno055OperationModeConfig)
@@ -234,9 +213,6 @@ func (s *Sensor) UseExternalCrystal(b bool) error {
 }
 
 func (s *Sensor) Calibration() (CalibrationOffsets, *CalibrationStatus, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	status, err := s.bus.Read(bno055CalibStat)
 	if err != nil {
 		return nil, nil, err
@@ -267,9 +243,6 @@ func (s *Sensor) Calibration() (CalibrationOffsets, *CalibrationStatus, error) {
 }
 
 func (s *Sensor) Calibrate(offsets CalibrationOffsets) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	prevMode := s.opMode
 
 	err := s.setOperationMode(bno055OperationModeConfig)
@@ -291,9 +264,6 @@ func (s *Sensor) Calibrate(offsets CalibrationOffsets) error {
 }
 
 func (s *Sensor) AxisConfig() (*AxisConfig, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	mapConfig, err := s.bus.Read(bno055AxisMapConfig)
 	if err != nil {
 		return nil, err
@@ -323,9 +293,6 @@ func (s *Sensor) AxisConfig() (*AxisConfig, error) {
 //          |____________|/
 //
 func (s *Sensor) RemapAxis(config *AxisConfig) error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	prevMode := s.opMode
 
 	err := s.setOperationMode(bno055OperationModeConfig)
@@ -352,9 +319,6 @@ func (s *Sensor) RemapAxis(config *AxisConfig) error {
 }
 
 func (s *Sensor) Temperature() (int8, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	temperature, err := s.bus.Read(bno055Temp)
 	if err != nil {
 		return 0, err
@@ -364,9 +328,6 @@ func (s *Sensor) Temperature() (int8, error) {
 }
 
 func (s *Sensor) Magnetometer() (*Vector, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	x, y, z, err := s.readVector(bno055MagDataXLsb)
 	if err != nil {
 		return nil, err
@@ -383,9 +344,6 @@ func (s *Sensor) Magnetometer() (*Vector, error) {
 }
 
 func (s *Sensor) Gyroscope() (*Vector, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	x, y, z, err := s.readVector(bno055GyroDataXLsb)
 	if err != nil {
 		return nil, err
@@ -402,9 +360,6 @@ func (s *Sensor) Gyroscope() (*Vector, error) {
 }
 
 func (s *Sensor) Euler() (*Vector, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	x, y, z, err := s.readVector(bno055EulerHLsb)
 	if err != nil {
 		return nil, err
@@ -421,9 +376,6 @@ func (s *Sensor) Euler() (*Vector, error) {
 }
 
 func (s *Sensor) Accelerometer() (*Vector, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	x, y, z, err := s.readVector(bno055AccelDataXLsb)
 	if err != nil {
 		return nil, err
@@ -440,9 +392,6 @@ func (s *Sensor) Accelerometer() (*Vector, error) {
 }
 
 func (s *Sensor) LinearAccelerometer() (*Vector, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	x, y, z, err := s.readVector(bno055LinearAccelDataXLsb)
 	if err != nil {
 		return nil, err
@@ -459,9 +408,6 @@ func (s *Sensor) LinearAccelerometer() (*Vector, error) {
 }
 
 func (s *Sensor) Gravity() (*Vector, error) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	x, y, z, err := s.readVector(bno055GravityDataXLsb)
 	if err != nil {
 		return nil, err
@@ -496,9 +442,6 @@ func (s *Sensor) Quaternion() (*Quaternion, error) {
 }
 
 func (s *Sensor) Sleep() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	prevMode := s.opMode
 
 	err := s.setOperationMode(bno055OperationModeConfig)
@@ -520,9 +463,6 @@ func (s *Sensor) Sleep() error {
 }
 
 func (s *Sensor) Wakeup() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	prevMode := s.opMode
 
 	err := s.setOperationMode(bno055OperationModeConfig)
@@ -541,13 +481,6 @@ func (s *Sensor) Wakeup() error {
 	}
 
 	return nil
-}
-
-func (s *Sensor) Close() error {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	return s.bus.Close()
 }
 
 func (s *Sensor) setOperationMode(mode byte) error {
@@ -671,37 +604,6 @@ func (s *Sensor) init() error {
 	}
 
 	return nil
-}
-
-func WithRetry(retryCount int, retryTimeout time.Duration) Option {
-	return func(config *config) {
-		config.retryCount = retryCount
-		config.retryTimeout = retryTimeout
-	}
-}
-
-func NewSensor(addr uint8, bus int, options ...Option) (*Sensor, error) {
-	config := &config{}
-	for _, option := range options {
-		option(config)
-	}
-
-	i2cBus, err := i2c.NewBus(addr, bus, config.retryCount, config.retryTimeout)
-	if err != nil {
-		return nil, err
-	}
-
-	sensor, err := NewSensorFromBus(i2cBus)
-	if err != nil {
-		return nil, err
-	}
-
-	err = sensor.init()
-	if err != nil {
-		return nil, err
-	}
-
-	return sensor, nil
 }
 
 func NewSensorFromBus(bus I2CBus) (*Sensor, error) {

@@ -7,11 +7,17 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/kpeu3i/bno055"
+	"github.com/andycondon/bno055"
+	"github.com/andycondon/bno055/i2c"
 )
 
 func main() {
-	sensor, err := bno055.NewSensor(0x28, 1)
+	i2cBus, err := i2c.NewBus(0x28, 1)
+	if err != nil {
+		panic(err)
+	}
+
+	sensor, err := bno055.NewSensorFromBus(i2cBus)
 	if err != nil {
 		panic(err)
 	}
@@ -33,7 +39,7 @@ func main() {
 	for !isCalibrated {
 		select {
 		case <-signals:
-			err := sensor.Close()
+			err := i2cBus.Close()
 			if err != nil {
 				panic(err)
 			}

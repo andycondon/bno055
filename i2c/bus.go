@@ -12,6 +12,13 @@ const (
 	i2cSlave = 0x0703
 )
 
+type Option func(config *config)
+
+type config struct {
+	retryCount   int
+	retryTimeout time.Duration
+}
+
 type Bus struct {
 	retryCount   int
 	retryTimeout time.Duration
@@ -19,7 +26,19 @@ type Bus struct {
 	rc           *os.File
 }
 
-func NewBus(addr uint8, bus int, retryCount int, retryTimeout time.Duration) (*Bus, error) {
+func WithRetry(retryCount int, retryTimeout time.Duration) Option {
+	return func(config *config) {
+		config.retryCount = retryCount
+		config.retryTimeout = retryTimeout
+	}
+}
+
+func NewBus(addr uint8, bus int, options ...Option) (*Bus, error) {
+	config := &config{}
+	for _, option := range options {
+		option(config)
+	}
+
 	file, err := os.OpenFile(fmt.Sprintf("/dev/i2c-%d", bus), os.O_RDWR, 0600)
 	if err != nil {
 		return nil, err
@@ -31,8 +50,8 @@ func NewBus(addr uint8, bus int, retryCount int, retryTimeout time.Duration) (*B
 	}
 
 	i2cBus := &Bus{
-		retryCount:   retryCount,
-		retryTimeout: retryTimeout,
+		retryCount:   config.retryCount,
+		retryTimeout: config.retryTimeout,
 		rc:           file,
 	}
 
